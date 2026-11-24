@@ -397,7 +397,8 @@ test('all problems: a listed outside module names every problem too', () => {
 });
 test('a matched word that is not one of the listed literals is still sanitised', () => {
   assert.throws(() => run(`${thm}  #zz_q 1\n`), (e) => e.message.startsWith('line 5: "?zz_q" is not allowed'));
-  assert.throws(() => run(`${thm}  exact x% y\n`), (e) => e.message.startsWith('line 5: "x?" is not allowed'));
+  // (a single character before % is the remainder operator since sign 91; the sanitising is shown on a longer name)
+  assert.throws(() => run(`${thm}  exact xy% y\n`), (e) => e.message.startsWith('line 5: "xy?" is not allowed'));
   assert.throws(() => run(`${thm}  exact \x60(foo| y)\n`), (e) => e.message.startsWith('line 5: "??foo?" is not allowed'));
   assert.throws(() => run(`${thm}  exact \x60(tactic| y)\n`), (e) => e.message.startsWith('line 5: "\x60(tactic|" is not allowed'));
 });
@@ -416,4 +417,13 @@ test('more than one file: the refusal says to send each step as its own pull req
   assert.throws(() => checkPrR(pr(1), two, { tree: [] }, 'o/r', 'main'), SAY);
   // no file is not "more than one": the old text, no sentence
   assert.throws(() => checkPrR(pr(0), [], { tree: [] }, 'o/r', 'main'), e => /must add exactly one/.test(e.message) && !SAY.test(e.message));
+});
+// The % rule (red team sign 91, 2026-11-24): the remainder operator after a single character or a number is plain;
+// a name of two or more characters straight before % (a library term macro such as eval%) is refused.
+test('the remainder operator after one character or a number is plain; a longer name before % is refused', () => {
+  const T = (body) => `theorem PEqualNP.Outside.L_x : True := by\n  ${body}\n  trivial\n`;
+  for (const ok of ['have h : n%2 = n % 2 := rfl', 'have h : (k%m) = k % m := rfl', 'have h : 10%3 = 1 := rfl', 'have h : (a+b)%2 = (a+b)%2 := rfl'])
+    checkPlainAll(T(ok));
+  for (const bad of ['have h := eval% (1 + 1)', 'have h := type_of% x', 'have h : ab%2 = 0 := sorry', 'have h := x1%y', 'have h := decl_name%'])
+    assert.throws(() => checkPlainAll(T(bad)), /is not allowed|sorry/, bad);
 });

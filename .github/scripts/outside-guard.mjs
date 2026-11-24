@@ -219,7 +219,7 @@ const B = String.raw`(?<![A-Za-z0-9_])`, A = String.raw`(?![A-Za-z0-9_])`;
 const FORBIDDEN = new RegExp([
   String.raw`"|[«»]|simproc|builtin_|native|bv_decide|ofReduce|reduceNat|reduceBool`,
   '|' + B + String.raw`(Lean|System|IO|Elab|Meta|Lake|FS|Process|EIO)` + A,
-  String.raw`|_root_|RealWorld|BaseIO|include_str|notation|[A-Za-z0-9_]%|polyrith|initialize|run_cmd|run_tac|run_elab|run_meta|by_elab`,
+  String.raw`|_root_|RealWorld|BaseIO|include_str|notation|[A-Za-z_][A-Za-z0-9_']*[A-Za-z0-9_']%|polyrith|initialize|run_cmd|run_tac|run_elab|run_meta|by_elab`,
   '|' + B + String.raw`elab|` + B + String.raw`macro|` + B + 'syntax' + A + '|' + B + 'attribute' + A,
   '|' + B + 'axiom' + A + '|' + B + 'opaque' + A + String.raw`|unsafe|` + B + 'partial' + A + String.raw`|sorry|` + B + 'admit' + A,
   String.raw`|#[a-z_][a-z_]{2,}|implemented_by|extern`,
@@ -248,6 +248,10 @@ const LIMIT = /set_option (maxRecDepth|maxHeartbeats|synthInstance\.maxSize|synt
 const INVISIBLE = /[​-‏‪-‮⁠-⁩﻿]/u;
 const CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f]/u;
 
+// THE % RULE (red team sign 91, 2026-11-24): a name written straight before % is a library term macro
+// (eval% evaluates code while the file elaborates; type_of%, decl_name% and their kind), so a NAME of two or
+// more characters before % is refused, whatever follows. A single character or a number before % is the
+// remainder operator (n%2, k%m, 10%3): no macro of the library is one character long, so that is plain.
 export function checkPlain(text) {
   plainChars(text);
   const problems = [];
